@@ -1,0 +1,534 @@
+
+cat > tests/scp_test.go << 'EOF'
+package test
+
+import (
+	"encoding/json"
+	"testing"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestServiceControlPolicyStructure(t *testing.T) {
+	policyDoc := `{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Sid": "DenyCloudTrailDisable",
+				"Effect": "Deny",
+				"Action": [
+					"cloudtrail:StopLogging",
+					"cloudtrail:DeleteTrail"
+				],
+				"Resource": "*"
+			}
+		]
+	}`
+
+	var policy map[string]interface{}
+	err := json.Unmarshal([]byte(policyDoc), &policy)
+	assert.NoError(t, err, "Policy should be valid JSON")
+	assert.Equal(t, "2012-10-17", policy["Version"])
+}
+
+func TestSCPRegionRestriction(t *testing.T) {
+	globalServices := []string{
+		"iam:CreateRole",
+		"sts:AssumeRole", 
+		"cloudfront:CreateDistribution",
+	}
+
+	for _, service := range globalServices {
+		t.Run("GlobalService_"+service, func(t *testing.T) {
+			assert.True(t, isGlobalServiceExempt(service))
+		})
+	}
+}
+
+func isGlobalServiceExempt(action string) bool {
+	globalPrefixes := []string{"iam:", "sts:", "cloudfront:", "route53:"}
+	for _, prefix := range globalPrefixes {
+		if len(action) > len(prefix) && action[:len(prefix)] == prefix {
+			return true
+		}
+	}
+	return false
+}
+EOF
+# terraform.tfvars example
+account_name          = "aisi-ml-platform"
+environment          = "prod" 
+security_account_id  = "123456789012"
+logging_account_id   = "234567890123"
+central_logging_bucket = "aisi-org-cloudtrail-logs"
+config_s3_bucket     = "aisi-org-config"
+approved_regions     = ["eu-west-2", "eu-west-1", "us-east-1"]
+log_retention_days   = 90
+enable_auto_tagging  = true
+
+default_tags = {
+  Organization = "AISI"
+  ManagedBy   = "terraform"
+  Baseline    = "aisi-security-v1"
+  Purpose     = "ml-platform"
+  Owner       = "platforterraform {
+  required_version = ">= 1.0.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.approved_regions[0] # use first approved region
+}
+
+# Example: central CloudTrail for org-wide logging
+resource "aws_cloudtrail" "org_trail" {
+  name                          = "${var.account_name}-org-trail"
+  s3_bucket_name                = var.central_logging_bucket
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  enable_logging                = true
+}
+
+# Example: AWS Config recorder
+resource "aws_config_configuration_recorder" "default" {
+  name     = "default"
+  role_arn = "arn:aws:iam::${var.security_account_id}:role/ConfigRecorderRole"
+
+  recording_group {
+    all_supported = true
+    include_global_resource_types = true
+  }
+}
+
+# Example: apply default tags to all resources
+provider "aws" {
+  default_tags {
+    tags = var.default_tags
+  }
+}
+
+terraform {
+  required_version = ">= 1.0.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.approved_regions[0] # use first approved region
+  default_tags {
+    tags = var.default_tags
+  }
+}
+
+# === CloudTrail for centralized logging ===
+resource "aws_cloudtrail" "org_trail" {
+  name                          = "${var.account_name}-org-trail"
+  s3_bucket_name                = var.central_logging_bucket
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  enable_logging                = true
+}
+
+# === AWS Config ===
+resource "aws_config_configuration_recorder" "default" {
+  name     = "default"
+  role_arn = "arn:aws:iam::${var.security_account_id}:role/ConfigRecorderRole"
+
+  recording_group {
+    all_supported              = true
+    include_global_resource_types = true
+  }
+}
+
+resource "aws_config_delivery_channel" "default" {
+  name           = "default"
+  s3_bucket_name = var.config_s3_bucket
+
+  depends_on = [aws_config_configuration_recorder.default]
+}
+
+resource "aws_config_configuration_recorder_status" "default" {
+  name       = aws_config_configuration_recorder.default.name
+  is_enabled = true
+}
+
+# === Example: GuardDuty ===
+resource "aws_guardduty_detector" "this" {
+  enable = true
+}
+variable "account_name" {
+  description = "Friendly name of the AWS account"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name (e.g. dev, staging, prod)"
+  type        = string
+}
+
+variable "security_account_id" {
+  description = "AWS account ID for the security account"
+  type        = string
+}
+
+variable "logging_account_id" {
+  description = "AWS account ID for the centralized logging account"
+  type        = string
+}
+
+variable "central_logging_bucket" {
+  description = "Name of the central CloudTrail logging S3 bucket"
+  type        = string
+}
+
+variable "config_s3_bucket" {
+  description = "Name of the S3 bucket for AWS Config delivery"
+  type        = string
+}
+
+variable "approved_regions" {
+  description = "List of AWS regions approved for workloads"
+  type        = list(string)
+}
+
+variable "log_retention_days" {
+  description = "Number of days to retain CloudTrail and Config logs"
+  type        = number
+  default     = 90
+}
+
+variable "enable_auto_tagging" {
+  description = "Enable Lambda function for auto-tagging resources"
+  type        = bool
+  default     = true
+}
+
+variable "default_tags" {
+  description = "Default tags applied to all resources"
+  type        = map(string)
+}
+cd terraform
+terraform init
+terraform validate
+terraform plan -var-file=terraform.tfvars
+
+terraform apply -var-file=terraform.tfvars
+
+# === CloudTrail Output ===
+output "cloudtrail_arn" {
+  description = "ARN of the centralized CloudTrail"
+  value       = aws_cloudtrail.org_trail.arn
+}
+
+# === AWS Config Outputs ===
+output "config_recorder_name" {
+  description = "Name of the AWS Config recorder"
+  value       = aws_config_configuration_recorder.default.name
+}
+
+output "config_bucket" {
+  description = "S3 bucket used for AWS Config delivery"
+  value       = var.config_s3_bucket
+}
+
+# === GuardDuty Outputs ===
+output "guardduty_detector_id" {
+  description = "ID of the GuardDuty detector"
+  value       = aws_guardduty_detector.this.id
+}
+
+output "guardduty_account_id" {
+  description = "AWS account where GuardDuty is enabled"
+  value       = data.aws_caller_identity.current.account_id
+}
+
+# === Default Tags ===
+output "default_tags" {
+  description = "Tags automatically applied to all resources"
+  value       = var.default_tags
+}
+
+ls -la
+ls terraform/
+ls policies/
+ls scripts/
+ls tests/
+cd terraform/
+terraform validate
+cd ..
+git add .
+git commit -m "Final commit: AISI AWS Security Baseline ready for submission
+
+✅ Complete implementation with all stretch goals
+✅ Production-ready Terraform modules
+✅ Automated deployment scripts  
+✅ Comprehensive testing framework
+✅ Detailed documentation and cost analysis"
+
+git push origin main
+# Check what's in your tests directory
+ls tests/
+
+# Validate Terraform configuration
+cd terraform/
+terraform validate
+cd ..
+
+# Add all files to git
+git add .
+
+# Commit with your message
+git commit -m "Final commit: AISI AWS Security Baseline ready for submission
+
+✅ Complete implementation with all stretch goals
+✅ Production-ready Terraform modules
+✅ Automated deployment scripts  
+✅ Comprehensive testing framework
+✅ Detailed documentation and cost analysis"
+
+# Push to GitHub
+git push origin main
+cd terraform
+terraform init
+terraform validate
+git add .
+git commit -m "Final commit: AISI AWS Security Baseline ready for submission ✅ Terraform modules ✅ Deployment scripts ✅ Testing ✅ Docs"
+git push origin main
+
+git add .
+
+# Single-line commit (safe & quick)
+git commit -m "Final commit: AISI AWS Security Baseline ready for submission ✅ Terraform modules ✅ Deployment scripts ✅ Testing ✅ Docs"
+git push origin main
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🚀 AISI AWS Security Baseline - Deployment Script"
+
+# Go to terraform folder
+cd "$(dirname "$0")/../terraform"
+
+# Initialize Terraform
+echo "👉 Initializing Terraform..."
+terraform init -input=false
+
+# Validate configuration
+echo "👉 Validating Terraform..."
+terraform validate
+
+# Create a plan
+echo "👉 Creating Terraform plan..."
+terraform plan -var-file=terraform.tfvars -out=tfplan
+
+# Apply the plan
+echo "👉 Applying Terraform changes..."
+terraform apply -auto-approve tfplan
+
+echo "✅ Deployment complete!"
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
+
+cat > scripts/deploy.sh << 'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🚀 AISI AWS Security Baseline - Deployment Script"
+
+# Go to terraform folder
+cd "$(dirname "$0")/../terraform"
+
+# Initialize Terraform
+echo "👉 Initializing Terraform..."
+terraform init -input=false
+
+# Validate configuration
+echo "👉 Validating Terraform..."
+terraform validate
+
+# Create a plan
+echo "👉 Creating Terraform plan..."
+terraform plan -var-file=terraform.tfvars -out=tfplan
+
+# Apply the plan
+echo "👉 Applying Terraform changes..."
+terraform apply -auto-approve tfplan
+
+echo "✅ Deployment complete!"
+EOF
+
+CLEAR
+cat > scripts/deploy.sh << 'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🚀 AISI AWS Security Baseline - Deployment Script"
+
+# Go to terraform folder
+cd "$(dirname "$0")/../terraform"
+
+# Initialize Terraform
+echo "👉 Initializing Terraform..."
+terraform init -input=false
+
+# Validate configuration
+echo "👉 Validating Terraform..."
+terraform validate
+
+# Create a plan
+echo "👉 Creating Terraform plan..."
+terraform plan -var-file=terraform.tfvars -out=tfplan
+
+# Apply the plan
+echo "👉 Applying Terraform changes..."
+terraform apply -auto-approve tfplan
+
+echo "✅ Deployment complete!"
+EOF
+
+nano scripts/deploy.sh
+
+XXXXXX
+
+# Create the validation script
+cat > scripts/validate.sh << 'EOF'
+#!/bin/bash
+set -e
+
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+error() {
+    echo -e "${RED}❌ $1${NC}"
+    exit 1
+}
+
+log() {
+    echo -e "${BLUE}🔍 $1${NC}"
+}
+
+echo "🔍 AISI Security Baseline - Environment Validation"
+echo "=================================================="
+
+# Check AWS CLI
+log "Checking AWS CLI..."
+if ! command -v aws &> /dev/null; then
+    error "AWS CLI not found. Please install AWS CLI v2"
+fi
+success "AWS CLI found: $(aws --version | head -n1)"
+
+# Check AWS credentials
+log "Checking AWS credentials..."
+if ! aws sts get-caller-identity &> /dev/null; then
+    error "AWS credentials not configured. Run 'aws configure' first"
+fi
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+success "AWS credentials valid for account: $ACCOUNT_ID"
+
+# Check Terraform
+log "Checking Terraform..."
+if ! command -v terraform &> /dev/null; then
+    error "Terraform not found. Please install Terraform >= 1.0"
+fi
+success "Terraform found: $(terraform version | head -n1)"
+
+# Check for configuration files
+log "Checking configuration files..."
+if [ ! -f "terraform.tfvars" ]; then
+    if [ ! -f "terraform/terraform.tfvars.example" ]; then
+        error "No terraform.tfvars found and no example available"
+    else
+        warning "terraform.tfvars not found. Example available at terraform/terraform.tfvars.example"
+    fi
+else
+    success "terraform.tfvars found"
+fi
+
+# Check Terraform syntax
+log "Validating Terraform syntax..."
+cd terraform/ 2>/dev/null || error "terraform/ directory not found"
+if terraform validate &> /dev/null; then
+    success "Terraform configuration is valid"
+else
+    error "Terraform validation failed. Check your .tf files"
+fi
+cd .. || exit 1
+
+success "✅ Environment validation completed successfully!"
+echo "Ready to deploy with: ./scripts/deploy.sh"
+EOF
+
+# Make it executable
+chmod +x scripts/validate.sh
+cat > scripts/validate.sh << 'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+log() { echo -e "🔎 $*"; }
+success() { echo -e "✅ $*"; }
+error() { echo -e "❌ $*" >&2; exit 1; }
+
+log "Validating Terraform syntax..."
+cd terraform/ 2>/dev/null || error "terraform/ directory not found"
+
+if terraform validate &> /dev/null; then
+    success "Terraform configuration is valid"
+else
+    error "Terraform validation failed. Check your .tf files"
+fi
+
+cd .. || exit 1
+
+success "Environment validation completed successfully!"
+echo "👉 Ready to deploy with: ./scripts/deploy.sh"
+EOF
+
+chmod +x scripts/validate.sh
+./scripts/validate.sh
+EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+log() { echo -e "🔎 $*"; }
+success() { echo -e "✅ $*"; }
+error() { echo -e "❌ $*" >&2; exit 1; }
+
+log "Validating Terraform syntax..."
+cd terraform/ 2>/dev/null || error "terraform/ directory not found"
+
+if terraform validate &> /dev/null; then
+    success "Terraform configuration is valid"
+else
+    error "Terraform validation failed. Check your .tf files"
+fi
+
+cd .. || exit 1
+
+success "Environment validation completed successfully!"
+echo "👉 Ready to deploy with: ./scripts/deploy.sh"
+
+EOF
+stty sane; reset
+

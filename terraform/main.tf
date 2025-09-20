@@ -1,0 +1,42 @@
+# AWS Security Baseline Module
+# Provides day-one security posture for new accounts
+
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+# Data sources for organization information
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+data "aws_organizations_organization" "org" {}
+
+# Local values for consistent resource naming
+locals {
+  account_id = data.aws_caller_identity.current.account_id
+  region     = data.aws_region.current.name
+  
+  common_tags = merge(var.default_tags, {
+    Environment   = var.environment
+    ManagedBy    = "terraform"
+    Baseline     = "aisi-security-v1"
+    CreatedDate  = formatdate("YYYY-MM-DD", timestamp())
+  })
+}
+
+# ==== CENTRALIZED LOGGING ====
+
+# CloudTrail for API logging
+resource "aws_cloudtrail" "main" {
+  name                          = "${var.account_name}-cloudtrail"
+  s3_bucket_name               = var.central_logging_bucket
+  s3_key_prefix               = "cloudtrail/${local.account_id}/"
+  include_global_service_events = true
+  is_multi_region_trail        = true
+  enable_logging               = true
+  enab

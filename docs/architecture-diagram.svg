@@ -1,0 +1,114 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#f5f5f5"/>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold">
+    AISI AWS Security Baseline - Multi-Account Architecture
+  </text>
+  
+  <!-- Application Account -->
+  <rect x="50" y="70" width="200" height="400" fill="#fff3e0" stroke="#ff9800" stroke-width="2" rx="10"/>
+  <text x="150" y="95" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">
+    Application Account
+  </text>
+  
+  <!-- CloudTrail -->
+  <rect x="70" y="120" width="160" height="40" fill="#fff" stroke="#ff9800" stroke-width="1" rx="5"/>
+  <text x="150" y="145" text-anchor="middle" font-family="Arial" font-size="12">CloudTrail + KMS</text>
+  
+  <!-- GuardDuty -->
+  <rect x="70" y="180" width="160" height="40" fill="#fff" stroke="#ff9800" stroke-width="1" rx="5"/>
+  <text x="150" y="205" text-anchor="middle" font-family="Arial" font-size="12">GuardDuty</text>
+  
+  <!-- Config -->
+  <rect x="70" y="240" width="160" height="40" fill="#fff" stroke="#ff9800" stroke-width="1" rx="5"/>
+  <text x="150" y="265" text-anchor="middle" font-family="Arial" font-size="12">AWS Config</text>
+  
+  <!-- VPC Flow Logs -->
+  <rect x="70" y="300" width="160" height="40" fill="#fff" stroke="#ff9800" stroke-width="1" rx="5"/>
+  <text x="150" y="325" text-anchor="middle" font-family="Arial" font-size="12">VPC Flow Logs</text>
+  
+  <!-- Exception Management -->
+  <rect x="70" y="360" width="160" height="80" fill="#e8f5e8" stroke="#4caf50" stroke-width="1" rx="5"/>
+  <text x="150" y="385" text-anchor="middle" font-family="Arial" font-size="11">Exception Manager</text>
+  <text x="150" y="405" text-anchor="middle" font-family="Arial" font-size="10">DynamoDB + Lambda</text>
+  <text x="150" y="425" text-anchor="middle" font-family="Arial" font-size="10">Auto-remediation</text>
+  
+  <!-- Security Account -->
+  <rect x="300" y="70" width="200" height="250" fill="#ffebee" stroke="#d32f2f" stroke-width="2" rx="10"/>
+  <text x="400" y="95" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">
+    Security Account
+  </text>
+  
+  <!-- Config Aggregator -->
+  <rect x="320" y="120" width="160" height="40" fill="#fff" stroke="#d32f2f" stroke-width="1" rx="5"/>
+  <text x="400" y="145" text-anchor="middle" font-family="Arial" font-size="12">Config Aggregator</text>
+  
+  <!-- Security Hub -->
+  <rect x="320" y="180" width="160" height="40" fill="#fff" stroke="#d32f2f" stroke-width="1" rx="5"/>
+  <text x="400" y="205" text-anchor="middle" font-family="Arial" font-size="12">Security Hub</text>
+  
+  <!-- Compliance Dashboard -->
+  <rect x="320" y="240" width="160" height="60" fill="#fff" stroke="#d32f2f" stroke-width="1" rx="5"/>
+  <text x="400" y="265" text-anchor="middle" font-family="Arial" font-size="12">Compliance</text>
+  <text x="400" y="285" text-anchor="middle" font-family="Arial" font-size="12">Dashboard</text>
+  
+  <!-- Logging Account -->
+  <rect x="550" y="70" width="200" height="250" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="10"/>
+  <text x="650" y="95" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">
+    Logging Account
+  </text>
+  
+  <!-- S3 CloudTrail -->
+  <rect x="570" y="120" width="160" height="40" fill="#fff" stroke="#1976d2" stroke-width="1" rx="5"/>
+  <text x="650" y="145" text-anchor="middle" font-family="Arial" font-size="12">S3 CloudTrail Logs</text>
+  
+  <!-- S3 Config -->
+  <rect x="570" y="180" width="160" height="40" fill="#fff" stroke="#1976d2" stroke-width="1" rx="5"/>
+  <text x="650" y="205" text-anchor="middle" font-family="Arial" font-size="12">S3 Config Data</text>
+  
+  <!-- Log Analytics -->
+  <rect x="570" y="240" width="160" height="60" fill="#fff" stroke="#1976d2" stroke-width="1" rx="5"/>
+  <text x="650" y="265" text-anchor="middle" font-family="Arial" font-size="12">Log Analytics</text>
+  <text x="650" y="285" text-anchor="middle" font-family="Arial" font-size="12">Long-term Storage</text>
+  
+  <!-- Organization SCPs -->
+  <rect x="200" y="380" width="400" height="80" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2" rx="10"/>
+  <text x="400" y="405" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold">
+    Organization-Level Controls
+  </text>
+  <text x="400" y="425" text-anchor="middle" font-family="Arial" font-size="12">
+    Service Control Policies (SCPs)
+  </text>
+  <text x="400" y="445" text-anchor="middle" font-family="Arial" font-size="11">
+    • Regional restrictions • KMS protection • Public access prevention
+  </text>
+  
+  <!-- Data Flow Arrows -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+  
+  <!-- CloudTrail to S3 -->
+  <line x1="230" y1="140" x2="570" y2="140" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="400" y="135" text-anchor="middle" font-family="Arial" font-size="10">Logs</text>
+  
+  <!-- Config to Security -->
+  <line x1="230" y1="260" x2="320" y2="140" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Exception flow -->
+  <line x1="230" y1="400" x2="320" y2="280" stroke="#4caf50" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="5,5"/>
+  
+  <!-- Legend -->
+  <text x="50" y="520" font-family="Arial" font-size="12" font-weight="bold">Key Features:</text>
+  <text x="50" y="540" font-family="Arial" font-size="10">• Cross-account KMS encryption</text>
+  <text x="50" y="555" font-family="Arial" font-size="10">• Automated exception management</text>
+  <text x="50" y="570" font-family="Arial" font-size="10">• Continuous compliance monitoring</text>
+  
+  <text x="400" y="520" font-family="Arial" font-size="12" font-weight="bold">Security Controls:</text>
+  <text x="400" y="540" font-family="Arial" font-size="10">• Service Control Policies (preventive)</text>
+  <text x="400" y="555" font-family="Arial" font-size="10">• AWS Config (detective)</text>
+  <text x="400" y="570" font-family="Arial" font-size="10">• Auto-remediation (corrective)</text>
+</svg>
