@@ -8,6 +8,7 @@
 
 ## Screenshot 2: Comprehensive Project Structure  
 **Caption:** Complete AISI security baseline repository demonstrating multi-language implementation with Terraform IaC, Python automation, Go testing, and comprehensive documentation
+
 ![Project Structure](02-project-structure.png)
 
 
