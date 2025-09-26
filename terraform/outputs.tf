@@ -1,9 +1,10 @@
+# Working output
 output "cloudtrail_arn" {
   description = "ARN of the CloudTrail"
   value       = aws_cloudtrail.main.arn
 }
 
-# The following outputs are commented out until the resources are defined
+# Commented until resources are defined
 # -------------------------------------------------------
 
 # output "logging_kms_key_arn" {
