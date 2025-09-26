@@ -244,7 +244,7 @@ resource "aws_ebs_encryption_by_default" "main" {
 }
 
 resource "aws_ebs_default_kms_key" "main" {
-  key_id = aws_kms_key.ebs.arn
+  key_arn = aws_kms_key.ebs.arn
 }
 
 # ==== S3 SECURITY ====
