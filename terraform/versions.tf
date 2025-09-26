@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -10,8 +10,13 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
-  
+  region                      = var.aws_region
+
+  # 🚨 Demo mode: prevents Terraform from calling AWS APIs
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  skip_metadata_api_check     = true
+
   default_tags {
     tags = var.default_tags
   }
