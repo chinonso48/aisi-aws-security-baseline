@@ -1,15 +1,6 @@
 # AWS Security Baseline Module
 # Provides day-one security posture for new accounts
 
-terraform {
-  required_version = ">= 1.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
 
 # Data sources for organization information
 data "aws_caller_identity" "current" {}
